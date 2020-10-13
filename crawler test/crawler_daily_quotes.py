@@ -9,8 +9,8 @@ import random
 from io import StringIO
 from sqlalchemy import create_engine
 
-sdt_str = '20200926'
-edt_str = '20201001'
+sdt_str = '20201012'
+edt_str = '20201013'
 #sdt_str = '20200922'
 #edt_str = '20200925'
 
@@ -23,7 +23,7 @@ while sdt < edt :
     datestr = sdt.strftime('%Y%m%d')
     sdt = sdt + datetime.timedelta(days = 1)
     r = requests.post('http://www.twse.com.tw/exchangeReport/MI_INDEX?response=csv&date=' + datestr + '&type=ALL')
-    time.sleep(random.randint(15,25))
+    #time.sleep(random.randint(15,25))
     if r.text == '' :
         print('tt')
         continue
@@ -48,6 +48,7 @@ while sdt < edt :
         index=False,
         if_exists='append' 
     )
-    
+    engine.execute("update stock_calendar set stock_data = 1 where data_dt = '" + datetime.datetime.strptime(datestr ,"%Y%m%d").strftime('%Y-%m-%d') + "'")
+
 
 

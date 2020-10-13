@@ -205,7 +205,8 @@ select data_dt ,security_code
  ,round(avg(transactions) over (partition by security_code order by data_dt rows between 19 preceding and current row) ,0) as "trx_20"
  ,round(avg(transactions) over (partition by security_code order by data_dt rows between 59 preceding and current row) ,0) as "trx_60"
  ,round(stddev(closing_price) over (partition by security_code order by data_dt rows between 19 preceding and current row) ,2) as "closing_price_sigma_20"
-from daily_quotes;
+from daily_quotes
+where closing_price > 0;
 
 -- daily_kd
 drop table if exists daily_kd;
@@ -230,3 +231,47 @@ insert into stock_list
 select security_code ,code_name ,min(data_dt)
 from daily_quotes
 group by security_code ,code_name ;
+
+-- daily_kd
+drop table if exists daily_bband;
+create table daily_bband(
+data_dt date
+,security_code character varying(10)
+,bband_top numeric(8 ,2)
+,bband_mid numeric(8 ,2)
+,bband_bot numeric(8 ,2)
+,bband_percent numeric(5,2)
+,bband_width numeric(5,2)
+);
+comment on column daily_bband.data_dt is '統計日期';
+comment on column daily_bband.security_code is '證券代號';
+comment on column daily_bband.bband_top is 'Bband上線(中線加上兩倍標準差)';
+comment on column daily_bband.bband_mid is 'Bband中線(20日移動平均線)';
+comment on column daily_bband.bband_bot is 'Bband下線(中線減去兩倍標準差)';
+comment on column daily_bband.bband_percent is '%B((收盤價−支撐線值) ÷ (壓力線−支撐線值))';
+comment on column daily_bband.bband_width is '帶寬指標值';
+
+with bband as (
+	select data_dt ,security_code
+	 ,closing_price
+	 ,round(avg(closing_price) over (partition by security_code order by data_dt rows between 19 preceding and current row) ,2) as "closing_price_avg_20"
+	 ,round(stddev(closing_price) over (partition by security_code order by data_dt rows between 19 preceding and current row) ,2) as "closing_price_sigma_20"
+	from daily_quotes
+	where closing_price > 0
+	),
+	bband_wide as (
+	select data_dt ,security_code
+	 ,(closing_price_avg_20 + 2 * closing_price_sigma_20) as bband_top
+	 ,(closing_price_avg_20 - 2 * closing_price_sigma_20) as bband_bot
+	from bband
+	)
+insert into daily_bband
+select x.data_dt ,x.security_code
+ ,y.bband_top 
+ ,x.closing_price_avg_20 as bband_mid
+ ,y.bband_bot
+ ,round(case when (y.bband_top - y.bband_bot) = 0 then 0 else (x.closing_price - y.bband_bot) / (y.bband_top - y.bband_bot) end ,2) as bband_percent
+ ,round((y.bband_top - y.bband_bot) / x.closing_price ,2) as bband_width
+from bband x join bband_wide y
+ on x.data_dt = y.data_dt and x.security_code = y.security_code 
+;

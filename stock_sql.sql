@@ -25,6 +25,7 @@ with bband as (
 	 ,round(avg(closing_price) over (partition by security_code order by data_dt rows between 19 preceding and current row) ,2) as "closing_price_avg_20"
 	 ,round(stddev(closing_price) over (partition by security_code order by data_dt rows between 19 preceding and current row) ,2) as "closing_price_sigma_20"
 	from daily_quotes
+	where closing_price > 0
 	),
 	bband_wide as (
 	select data_dt ,security_code

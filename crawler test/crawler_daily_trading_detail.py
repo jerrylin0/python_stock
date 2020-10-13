@@ -10,8 +10,8 @@ import random
 from io import StringIO
 from sqlalchemy import create_engine
 
-sdt_str = '20200926'
-edt_str = '20201001'
+sdt_str = '20201012'
+edt_str = '20201013'
 
 sdt = datetime.datetime.strptime(sdt_str,"%Y%m%d")
 edt = datetime.datetime.strptime(edt_str,"%Y%m%d")
@@ -22,7 +22,7 @@ while sdt < edt :
     datestr = sdt.strftime('%Y%m%d')
     sdt = sdt + datetime.timedelta(days = 1)
     r = requests.post('http://www.twse.com.tw/fund/T86?response=csv&date=' + datestr + '&selectType=ALL')
-    time.sleep(random.randint(25 ,35))
+    #time.sleep(random.randint(25 ,35))
     if r.text == '' :
         print('tt')
         continue
